@@ -1,0 +1,38 @@
+{
+  "name": "ridni-family-tree",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k -n web,api \"vite --host 0.0.0.0\" \"tsx watch server/index.ts\"",
+    "build": "npm run check && vite build && node scripts/standalone.mjs",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "dev:web": "vite --host 0.0.0.0",
+    "dev:api": "tsx watch server/index.ts",
+    "start": "NODE_ENV=production tsx server/index.ts",
+    "db:push": "tsx server/migrate.ts",
+    "check": "tsc -b && tsc -p tsconfig.server.json"
+  },
+  "dependencies": {
+    "@xyflow/react": "^12.9.0",
+    "lucide-react": "^0.546.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "express": "^4.21.2",
+    "pg": "^8.13.3",
+    "dotenv": "^17.2.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "typescript": "~5.8.3",
+    "vite": "^6.3.0",
+    "tsx": "^4.21.0",
+    "@types/express": "^4.17.21",
+    "@types/pg": "^8.11.11",
+    "@types/node": "^22.14.0",
+    "concurrently": "^9.1.2"
+  }
+}
