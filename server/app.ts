@@ -1,12 +1,12 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
 import { randomUUID, randomBytes } from 'node:crypto';
 import path from 'node:path';
-import { pool, configured } from './db';
-import { hashPassword, verifyPassword, sessionToken, tokenHash } from './security';
-import { HttpError, credentials, text, validateTree } from './validation';
-import type { Tree } from '../src/data';
-import { isAllowedOrigin, allowedAppOrigins } from './origin';
-import { persistPhotos, lockPhotos, cleanUnusedPhotos } from './photos';
+import { pool, configured, configurationIssue } from './db.js';
+import { hashPassword, verifyPassword, sessionToken, tokenHash } from './security.js';
+import { HttpError, credentials, text, validateTree } from './validation.js';
+import type { Tree } from '../src/data.js';
+import { isAllowedOrigin, allowedAppOrigins } from './origin.js';
+import { persistPhotos, lockPhotos, cleanUnusedPhotos } from './photos.js';
 
 const DAY = 86400000;
 const production = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
@@ -44,7 +44,7 @@ app.use('/api/auth', (req,_res,next) => {
   if (++entry.count>20 || attempts.size>10000) return next(new HttpError(429,'Забагато спроб. Спробуйте через 15 хвилин.'));
   attempts.set(key,entry);next();
 });
-app.get('/api/status',(_req,res) => res.json({configured}));
+app.get('/api/status',(_req,res) => res.json({configured,...(configurationIssue?{issue:configurationIssue}:{})}));
 app.use('/api',(_req,_res,next)=>configured?next():next(new HttpError(503,'Базу даних ще не підключено.')));
 app.get('/api/auth/me',route(async(req,res)=>res.json({profile:await user(req)})));
 app.post('/api/auth/register',route(async(req,res)=>{
@@ -64,11 +64,11 @@ app.post('/api/auth/register',route(async(req,res)=>{
   res.cookie('ridni_session',token,{...cookieOptions,maxAge:30*DAY});
   res.status(201).json({profile:{id,name:input.name,email:input.email}});
 }));
-const dummyHash=await hashPassword(randomBytes(32).toString('hex'));
+let dummyHash: Promise<string> | undefined;
 app.post('/api/auth/login',route(async(req,res)=>{
   const input=credentials(req.body||{});
   const {rows}=await pool.query('SELECT id,name,email,password_hash FROM ridni_users WHERE email=$1',[input.email]);
-  const account=rows[0]; const valid=await verifyPassword(input.password,account?.password_hash || dummyHash);
+  const account=rows[0]; const valid=await verifyPassword(input.password,account?.password_hash || await (dummyHash ??= hashPassword(randomBytes(32).toString('hex'))));
   if(!account || !valid)throw new HttpError(401,'Невірна електронна пошта або пароль.');
   await createSession(account.id,res);
   res.json({profile:{id:account.id,name:account.name,email:account.email}});

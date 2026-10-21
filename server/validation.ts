@@ -1,7 +1,7 @@
-import type { Person, Tree } from '../src/data';
-import { HttpError } from './validation-error';
-import { validatePhoto } from './photos';
-export { HttpError } from './validation-error';
+import type { Person, Tree } from '../src/data.js';
+import { HttpError } from './validation-error.js';
+import { validatePhoto } from './photos.js';
+export { HttpError } from './validation-error.js';
 export function text(value: unknown, label: string, max: number, required = false): string {
   if (typeof value !== 'string' || value.length > max || (required && !value.trim())) throw new HttpError(400, `Перевірте поле «${label}».`);
   return value.trim();

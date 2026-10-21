@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
-import type { Tree } from '../src/data';
-import { MAX_PHOTO_BYTES, PHOTO_DATA_PREFIX, PHOTO_SIDE } from '../src/photo-limits';
-import { HttpError } from './validation-error';
+import type { Tree } from '../src/data.js';
+import { MAX_PHOTO_BYTES, PHOTO_DATA_PREFIX, PHOTO_SIDE } from '../src/photo-limits.js';
+import { HttpError } from './validation-error.js';
 export const PHOTO_PATH = /^\/api\/photos\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 
 export function decodePhoto(value: string): Buffer {
