@@ -5,22 +5,23 @@ import { pool, configured } from './db';
 import { hashPassword, verifyPassword, sessionToken, tokenHash } from './security';
 import { HttpError, credentials, text, validateTree } from './validation';
 import type { Tree } from '../src/data';
-import { isAllowedOrigin } from './origin';
+import { isAllowedOrigin, allowedAppOrigins } from './origin';
 import { persistPhotos, lockPhotos, cleanUnusedPhotos } from './photos';
 
 const DAY = 86400000;
+const production = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
 export const app = express();
 app.disable('x-powered-by');
 app.use('/api', (_req, res, next) => { res.set('Cache-Control', 'no-store'); res.set('X-Content-Type-Options','nosniff'); next(); });
 app.use('/api', (req, _res, next) => {
   if (['GET','HEAD','OPTIONS'].includes(req.method)) return next();
-  const allowed = process.env.APP_ORIGIN || 'http://localhost:5173';
-  if (req.get('x-ridni-client') !== 'web' || !isAllowedOrigin(req.get('origin'),allowed,process.env.NODE_ENV==='production')) return next(new HttpError(403,'Запит із недозволеного джерела.'));
+  const allowed = allowedAppOrigins(process.env);
+  if (req.get('x-ridni-client') !== 'web' || !allowed.some(origin => isAllowedOrigin(req.get('origin'),origin,production))) return next(new HttpError(403,'Запит із недозволеного джерела.'));
   next();
 });
 app.use(express.json({ limit: '2mb' }));
 const route = (fn: (req: Request, res: Response) => Promise<unknown>) => (req: Request, res: Response, next: NextFunction) => { Promise.resolve(fn(req,res)).catch(next); };
-const cookieOptions = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' as const, path: '/' };
+const cookieOptions = { httpOnly: true, secure: production, sameSite: 'lax' as const, path: '/' };
 async function createSession(userId: string, res: Response) {
   const token = randomBytes(32).toString('hex');
   await pool.query('INSERT INTO ridni_sessions(token_hash,user_id,expires_at) VALUES($1,$2,$3)',[tokenHash(token),userId,new Date(Date.now()+30*DAY)]);
@@ -133,7 +134,7 @@ app.get('/api/photos/:id',route(async(req,res)=>{
   res.set('Content-Type','image/jpeg');res.set('Cross-Origin-Resource-Policy','same-origin');res.send(rows[0].data);
 }));
 app.use('/api',(_req,_res,next)=>next(new HttpError(404,'Маршрут не знайдено.')));
-if(process.env.NODE_ENV==='production'){
+if(production && process.env.VERCEL!=='1'){
   app.use(express.static(path.resolve('dist'),{index:'index.html'}));
   app.get(['/login','/register'],(_req,res)=>res.sendFile(path.resolve('dist/index.html')));
 }
